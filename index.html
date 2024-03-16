@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HTML to Markdown Converter</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+  <style>
+    body {
+      font-family: 'Roboto', sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background-color: #f1f3f4;
+    }
+
+    .container {
+      max-width: 800px;
+      width: 100%;
+      padding: 40px;
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 1px 2px 0 rgba(60, 64, 67, 0.3), 0 1px 3px 1px rgba(60, 64, 67, 0.15);
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 500;
+      margin-bottom: 30px;
+      text-align: center;
+      color: #202124;
+    }
+
+    .input-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      font-size: 16px;
+      font-weight: 500;
+      margin-bottom: 10px;
+      color: #5f6368;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 12px;
+      font-size: 16px;
+      border: 1px solid #dadce0;
+      border-radius: 4px;
+      outline: none;
+    }
+
+    button {
+      display: block;
+      width: 100%;
+      padding: 14px;
+      font-size: 16px;
+      font-weight: 500;
+      color: #fff;
+      background-color: #4285f4;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    button:hover {
+      background-color: #3367d6;
+    }
+
+    .result-container {
+      margin-top: 30px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .result-section {
+      width: 48%;
+    }
+
+    h2 {
+      font-size: 20px;
+      font-weight: 500;
+      margin-bottom: 10px;
+      color: #202124;
+    }
+
+    pre {
+      background-color: #f8f9fa;
+      padding: 10px;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+
+    .rendered-content {
+      background-color: #fff;
+      padding: 10px;
+      border-radius: 4px;
+      border: 1px solid #dadce0;
+    }
+
+    .copy-button {
+      display: block;
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      font-size: 14px;
+      font-weight: 500;
+      color: #5f6368;
+      background-color: #fff;
+      border: 1px solid #dadce0;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    .copy-button:hover {
+      background-color: #f1f3f4;
+    }
+
+    .loader {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #4285f4;
+      animation: spin 1s linear infinite;
+      z-index: 9999;
+    }
+
+    @keyframes spin {
+      0% {
+        transform: translate(-50%, -50%) rotate(0deg);
+      }
+      100% {
+        transform: translate(-50%, -50%) rotate(360deg);
+      }
+    }
+
+    .overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      z-index: 9998;
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/showdown/dist/showdown.min.js"></script>
+</head>
+<body>
+  <div class="container">
+    <h1>HTML to Markdown Converter</h1>
+    <div class="input-group">
+      <label for="url">Article URL:</label>
+      <input type="text" id="url" name="url" placeholder="Enter the article URL">
+    </div>
+    <button id="convert-btn">Convert to Markdown</button>
+    <div class="result-container">
+      <div class="result-section">
+        <h2>Markdown Source:</h2>
+        <pre><code id="md-source"></code></pre>
+        <button class="copy-button" id="copy-md-btn">Copy Markdown</button>
+      </div>
+      <div class="result-section">
+        <h2>Rendered HTML:</h2>
+        <div id="rendered-content" class="rendered-content"></div>
+        <button class="copy-button" id="copy-html-btn">Copy HTML</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="loader"></div>
+  <div class="overlay"></div>
+
+  <script>
+    const convertBtn = document.getElementById('convert-btn');
+    const urlInput = document.getElementById('url');
+    const mdSourceElement = document.getElementById('md-source');
+    const renderedContentElement = document.getElementById('rendered-content');
+    const resultContainer = document.querySelector('.result-container');
+    const copyMdButton = document.getElementById('copy-md-btn');
+    const copyHtmlButton = document.getElementById('copy-html-btn');
+    const loader = document.querySelector('.loader');
+    const overlay = document.querySelector('.overlay');
+
+    const converter = new showdown.Converter();
+
+    convertBtn.addEventListener('click', () => {
+      const qUrl = urlInput.value;
+      if (qUrl.trim() === '') {
+        alert('Please enter a valid article URL.');
+        return;
+      }
+      
+      loader.style.display = 'block';
+      overlay.style.display = 'block';
+
+      fetch('/convert', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ url: qUrl })
+      })
+        .then(response => response.json())
+        .then(data => {
+          const mdSource = data.mdSource;
+          mdSourceElement.textContent = mdSource;
+
+          const html = converter.makeHtml(mdSource);
+          renderedContentElement.innerHTML = html;
+          resultContainer.style.display = 'flex';
+
+          loader.style.display = 'none';
+          overlay.style.display = 'none';
+        })
+        .catch(error => {
+          console.error('Conversion failed:', error);
+          loader.style.display = 'none';
+          overlay.style.display = 'none';
+          alert('Conversion failed. Please check the console for more information.');
+        });
+    });
+
+    copyMdButton.addEventListener('click', () => {
+      const mdSource = mdSourceElement.textContent;
+      navigator.clipboard.writeText(mdSource)
+        .then(() => {
+          alert('Markdown source copied to clipboard!');
+        })
+        .catch(error => {
+          console.error('Failed to copy Markdown source:', error);
+        });
+    });
+
+    copyHtmlButton.addEventListener('click', () => {
+      const html = renderedContentElement.innerHTML;
+      navigator.clipboard.writeText(html)
+        .then(() => {
+          alert('Rendered HTML copied to clipboard!');
+        })
+        .catch(error => {
+          console.error('Failed to copy rendered HTML:', error);
+        });
+    });
+  </script>
+</body>
+</html>
