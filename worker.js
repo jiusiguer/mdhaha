@@ -17,7 +17,7 @@ async function handleRequest(request) {
       const qUrl = requestBody.url;
 
       try {
-        const response = await fetch('https://bit.kurssy.tech/convert', {
+        const response = await fetch('https://md.kurssy.tech/convert', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
